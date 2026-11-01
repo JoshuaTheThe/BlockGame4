@@ -7,38 +7,22 @@
 
 using namespace BlockGame4;
 
+std::string readFile(const std::string& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) {
+    throw std::runtime_error("readFile: cannot open " + path);
+  }
+  std::ostringstream ss;
+  ss << in.rdbuf();
+  return ss.str();
+}
+
 int main(void) {
   Renderer r{};
   MeshObject m{};
   m.loadFromObjFile("monkey.obj");
   m.synchronize();
-  ShaderProgram sh(
-    "#version 330 core\n"
-    "layout(location = 0) in vec3 aPos;\n"
-    "layout(location = 1) in vec2 aUV;\n"
-    "layout(location = 2) in vec3 aNormal;\n"
-    "uniform mat4 uModel;\n"
-    "uniform mat4 uView;\n"
-    "uniform mat4 uProjection;\n"
-    "out vec2 vUV;\n"
-    "out vec3 vNormal;\n"
-    "void main() {\n"
-    "  vUV = aUV;\n"
-    "  vNormal = aNormal;\n"
-    "  gl_Position = uProjection * uView * uModel * vec4(aPos, 1.0);\n"
-    "}\n",
-    
-    "#version 330 core\n"
-    "in vec2 vUV;\n"
-    "in vec3 vNormal;\n"
-    "out vec4 fragColor;\n"
-    "void main() {\n"
-    "  float linearDepth = (2.0 * 0.1 * 100.0) / (100.0 + 0.1 - gl_FragCoord.z * (100.0 - 0.1));\n"
-    "  vec3 n = normalize(vNormal);\n"
-    "  vec3 color = n * 0.5 + 0.5;\n"      // map [-1,1] -> [0,1]
-    "  float depthFade = 1.0 - smoothstep(1.0, 100.0, linearDepth);\n"
-    "  fragColor = vec4(color * depthFade, 1.0);\n"
-    "}\n");
+  ShaderProgram sh(readFile("vertex.glsl").c_str(), readFile("fragment.glsl").c_str());
   glm::mat4 view = glm::lookAt(
       glm::vec3(0.0f, 0.0f, 0.0f),   // camera pos
       glm::vec3(0.0f, 0.0f, -10.0f),
