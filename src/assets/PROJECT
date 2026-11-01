@@ -1,0 +1,12 @@
+name=unknown
+version=1.0.0
+src=src
+obj=obj
+bin=bin
+
+cc=cc
+c++=c++
+cc-flags=-O3 -ggdb
+c++-flags=-O3 -ggdb
+ld-flags=-lm -lSDL3 -lGL
+cpp-flags=
