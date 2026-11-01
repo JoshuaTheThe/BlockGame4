@@ -1,6 +1,7 @@
 
 #include "glad.h"
 #include "renderer.hpp"
+#include "compute.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -34,6 +35,32 @@ int main(void) {
   const int uModel = sh.gLocation("uModel");
   const int uView  = sh.gLocation("uView");
   const int uProj  = sh.gLocation("uProjection");
+
+  constexpr GLuint N = 256;
+  // 1. Create the output SSBO (uninitialized storage).
+  GpuBuffer outBuf(N * sizeof(uint32_t), nullptr);
+
+  // 2. Compile the compute shader.
+  ComputeShader cs(readFile("compute.glsl").c_str());
+  // 3. Bind the SSBO to binding point 0 (matches `layout(binding = 0)`).
+  cs.bindBuffer(0, outBuf.handle());
+  
+  // 4. Dispatch. 256 invocations / 64 per group = 4 workgroups.
+  cs.dispatch(N / 64);
+  // 5. Make the writes visible to the CPU, then force completion so
+  //    we can read back immediately. (In a real pipeline, use a fence
+  //    and read back next frame instead of glFinish.)
+  cs.barrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  glFinish();
+  // 6. Read back and verify.
+  std::vector<uint32_t> got(N);
+  outBuf.readback(got.data());
+  bool ok = true;
+  for (GLuint i = 0; i < N; ++i) {
+      if (got[i] != i) { ok = false; break; }
+  }
+  printf("compute %s: got[0]=%u got[%u]=%u\n",
+         ok ? "OK" : "FAILED", got[0], N - 1, got[N - 1]);
 
   int frames = 0;
   sh.apply();
